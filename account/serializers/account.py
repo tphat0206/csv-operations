@@ -1,14 +1,15 @@
-from django.contrib.auth import authenticate
+from django.db.models import Q
 from rest_framework import serializers
-from rest_framework.authtoken.models import Token
-from rest_framework.exceptions import AuthenticationFailed
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
 from account.models import Account
+
 
 class AccountSerializer(serializers.ModelSerializer):
     class Meta:
         model = Account
         exclude = ['password']
+
 
 class NameUserSerializer(serializers.ModelSerializer):
     class Meta:
@@ -17,39 +18,45 @@ class NameUserSerializer(serializers.ModelSerializer):
 
 
 class SignUpSerializer(serializers.Serializer):
-    username = serializers.CharField()
     password = serializers.CharField(write_only=True)
     email = serializers.EmailField()
-    first_name = serializers.CharField()
-    last_name = serializers.CharField()
 
-    def validate_username(self, username):
-        if Account.objects.filter(username=username).exists():
-            raise serializers.ValidationError('username existed')
-        return username
+    def validate_email(self, email):
+        if Account.objects.filter(Q(username=email) | Q(email=email)).exists():
+            raise serializers.ValidationError('Email existed')
+        return email
 
     def save(self, **kwargs):
-        Account.objects.create_user(
-            self.validated_data.get('username'),
+        account = Account.objects.create_user(
+            self.validated_data.get('email'),
             self.validated_data.get('email'),
             self.validated_data.get('password')
-        ).update(first_name=self.validated_data.get('first_name'),last_name=self.validated_data.get('last_name'))
+        )
+        return account
 
 
-class SignInSerializer(serializers.Serializer):
-    username = serializers.CharField(write_only=True)
-    password = serializers.CharField(write_only=True)
+class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
+    username_field = 'email'
+    name = serializers.CharField(read_only=True)
+    email = serializers.CharField(read_only=True)
 
-    token = serializers.CharField(read_only=True)
+    @classmethod
+    def get_token(cls, user):
+        token = super().get_token(user)
+        token['username'] = user.username
+        token['email'] = user.email
+        return token
 
-    def sign_in(self):
-        username = self.validated_data.get('username')
-        password = self.validated_data.get('password')
+    def validate(self, attrs):
+        data = super().validate(attrs)
+        data['access'] = str(self.get_token(self.user))
+        data['user_id'] = self.user.uuid
+        data['message'] = 'Login successful!'  # Custom message
 
-        user = authenticate(request=self.context.get('request'),
-                            username=username, password=password)
-        if not user:
-            raise AuthenticationFailed
+        return data
 
-        token, created = Token.objects.get_or_create(user=user)
-        return user, token.key
+    def update(self, instance, validated_data):
+        pass
+
+    def create(self, validated_data):
+        pass

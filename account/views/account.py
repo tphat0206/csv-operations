@@ -1,12 +1,12 @@
 # Create your views here.
-from rest_framework import status
+from rest_framework import status, permissions
 from rest_framework.decorators import action
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet
 
 from account.models import Account
-from account.serializers.account import SignUpSerializer, SignInSerializer, AccountSerializer
+from account.serializers.account import SignUpSerializer, CustomTokenObtainPairSerializer, AccountSerializer
 
 
 class AccountViewSet(GenericViewSet):
@@ -14,12 +14,19 @@ class AccountViewSet(GenericViewSet):
 
     def get_serializer_class(self):
         match self.action:
-            case 'sign_up':
+            case 'register':
                 return SignUpSerializer
-            case 'sign_in':
-                return SignInSerializer
+            case 'login':
+                return CustomTokenObtainPairSerializer
             case 'me':
                 return AccountSerializer
+
+    def get_permissions(self):
+        match self.action:
+            case 'register' | 'login':
+                return [permissions.AllowAny()]
+            case 'me':
+                return [permissions.IsAuthenticated()]
 
     @action(methods=['GET'], detail=False)
     def me(self, request: Request):
@@ -27,18 +34,17 @@ class AccountViewSet(GenericViewSet):
         return Response(serializer.data)
 
     @action(methods=['POST'], detail=False)
-    def sign_up(self, request: Request):
+    def register(self, request: Request):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        serializer.save()
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
+        account = serializer.save()
+        return Response({
+            "message": "Registration successful",
+            "user_id": account.uuid,
+        }, status=status.HTTP_201_CREATED)
 
     @action(methods=['POST'], detail=False)
-    def sign_in(self, request: Request):
+    def login(self, request: Request):
         serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        user, token = serializer.sign_in()
-        return Response({
-            'account': AccountSerializer(user).data,
-            'token': token,
-        })
+        token = serializer.validate(request.data)
+        return Response(token, status=status.HTTP_200_OK)
