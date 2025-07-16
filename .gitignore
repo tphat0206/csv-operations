@@ -1,0 +1,16 @@
+.idea
+# vscode
+.vscode
+
+# virtual environment
+venv
+
+#db
+celerybeat-schedule.db
+
+# Mac Finder
+.DS_Store
+
+*/__pycache__
+
+*.pyc

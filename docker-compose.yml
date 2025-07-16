@@ -1,0 +1,43 @@
+services:
+  backend:
+   build: .
+   container_name: backend
+   ports:
+     - "8000:8000"
+   environment:
+     - DEBUG=1
+     - DJANGO_ALLOWED_HOSTS=localhost 127.0.0.1
+     - CELERY_BROKER=redis://redis:6379/0
+     - CELERY_BACKEND=redis://redis:6379/0
+   depends_on:
+     db:
+       condition: service_healthy
+     redis:
+       condition: service_healthy
+
+  db:
+    image: postgres
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: secret
+      POSTGRES_DB: default
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    restart: unless-stopped
+    image: redis
+    container_name: redis
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
