@@ -5,7 +5,7 @@ from account.models import BaseModel
 
 def upload_to(_instance, file_name):
     now = timezone.now()
-    return f'uploads/{now.strftime("%Y")}/{now.strftime("%m")}/{file_name}'
+    return f'uploads/{now.strftime("%Y")}/{now.strftime("%m")}/{now.strftime("%H%M%S")}_{file_name}'
 
 class UploadedFile(BaseModel):
     file = models.FileField(upload_to=upload_to)

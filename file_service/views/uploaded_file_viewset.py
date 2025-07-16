@@ -5,6 +5,7 @@ from rest_framework.response import Response
 from file_service.models import UploadedFile
 from file_service.serializers import UploadedFileSerializer
 
+
 class UploadedFileViewSet(viewsets.ModelViewSet):
     queryset = UploadedFile.objects.all()
     serializer_class = UploadedFileSerializer
