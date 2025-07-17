@@ -25,7 +25,7 @@ class FileOperationService:
 
     def exec(self):
         try:
-            self.file_operation.status = 'processing'
+            self.file_operation.status = FileOperation.FileOperationStatus.PENDING
             self.file_operation.celery_task_id = self.celery_task_id
             self.file_operation.save(update_fields=['status', 'celery_task_id'])
 
@@ -36,7 +36,7 @@ class FileOperationService:
             content_file = ContentFile(output_buffer.encode('utf-8'))
 
             self.file_operation.processed_file.save(self._get_file_name, content_file, save=False)
-            self.file_operation.status = 'completed'
+            self.file_operation.status = FileOperation.FileOperationStatus.SUCCEEDED
             self.file_operation.error_message = None
             self.file_operation.save()
 
@@ -45,7 +45,7 @@ class FileOperationService:
         except Exception as e:
             logger.error(f"Error during CSV {self.file_operation.type} for file_id {self.file.uuid}: {e}",
                          exc_info=True)
-            self.file_operation.status = 'failed'
+            self.file_operation.status = FileOperation.FileOperationStatus.FAILED
             self.file_operation.error_message = str(e)
             self.file_operation.save(update_fields=['status', 'error_message'])
 

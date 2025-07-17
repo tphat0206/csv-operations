@@ -1,2 +1,2 @@
 from .uploaded_file import UploadedFileSerializer
-from .file_operation import FileOperationSerializer
+from .file_operation import CreateFileOperationSerializer

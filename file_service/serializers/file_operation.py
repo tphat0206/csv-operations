@@ -3,26 +3,25 @@ import logging
 
 from rest_framework import serializers
 
-from file_service.models import FileOperation
+from file_service.models import FileOperation, UploadedFile
+from file_service.services import ReadProcessedCsv
 from file_service.tasks import file_operation_task
 
 logger = logging.getLogger(__name__)
 
 
-class FileOperationSerializer(serializers.ModelSerializer):
+class CreateFileOperationSerializer(serializers.ModelSerializer):
     column_name = serializers.CharField(write_only=True, required=False)
     filter_params = serializers.JSONField(write_only=True, required=False)
+    type = serializers.CharField(write_only=True, required=True)
+    file = serializers.PrimaryKeyRelatedField(queryset=UploadedFile.objects.all(), write_only=True, required=True)
+    task_id = serializers.CharField(read_only=True, source='uuid')
 
     class Meta:
         model = FileOperation
         fields = [
-            'uuid', 'file', 'column_name', 'filter_params',
-            'type', 'status', 'celery_task_id', 'processed_file',
-            'error_message', 'parameters', 'created_at'
-        ]
-        read_only_fields = [
-            'status', 'celery_task_id',
-            'processed_file', 'error_message', 'created_at'
+            'task_id', 'file', 'column_name', 'filter_params',
+            'type',
         ]
 
     def validate_file(self, file):
@@ -54,8 +53,34 @@ class FileOperationSerializer(serializers.ModelSerializer):
 
         validated_data['parameters'] = json.dumps(parameters)
         validated_data['performed_by'] = self.context.get('request').user
-        file_operation = super(FileOperationSerializer, self).create(validated_data)
+        file_operation = super(CreateFileOperationSerializer, self).create(validated_data)
 
         file_operation_task.delay(file_operation.uuid)
 
         return file_operation
+
+
+class FileOperationSerializer(serializers.ModelSerializer):
+    results = serializers.SerializerMethodField(required=False)
+    error = serializers.CharField(source='error_message', required=False)
+    task_id = serializers.CharField(source='uuid')
+
+    class Meta:
+        model = FileOperation
+        fields = ['task_id', 'status', 'results', 'error']
+
+    def to_representation(self, instance):
+        ret = super().to_representation(instance)
+        return {key: value for key, value in ret.items() if value is not None}
+
+    def get_results(self, obj):
+        request = self.context.get('request')
+        n_value = getattr(request, 'n_value', None)
+        if obj.status == FileOperation.FileOperationStatus.SUCCEEDED:
+            file_path = obj.file.file.path
+            data = ReadProcessedCsv(file_path, n_value).exec()
+            return {
+                'data': data,
+                'file_link': obj.processed_file.url,
+            }
+        return None
