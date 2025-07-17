@@ -1,2 +1,2 @@
 from .uploaded_file_viewset import UploadedFileViewSet
-from .file_operation_viewset import FileOperationViewSet
+from .file_operation_viewset import CreateFileOperationViewSet, FileOperationStatusViewSet

@@ -4,7 +4,7 @@ from rest_framework import viewsets, mixins, permissions
 
 from file_service.models import FileOperation
 from file_service.serializers import CreateFileOperationSerializer
-from file_service.serializers.file_operation import FileOperationSerializer, logger
+from file_service.serializers.file_operation import FileOperationSerializer
 
 
 class FileOperationFilter(filters.FilterSet):
@@ -23,9 +23,19 @@ class FileOperationFilter(filters.FilterSet):
         ]
 
 
-class FileOperationViewSet(
+class CreateFileOperationViewSet(
     viewsets.GenericViewSet,
     mixins.CreateModelMixin,
+):
+    queryset = FileOperation.objects.all()
+    serializer_class = CreateFileOperationSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    filterset_class = FileOperationFilter
+
+
+
+class FileOperationStatusViewSet(
+    viewsets.GenericViewSet,
     mixins.RetrieveModelMixin,
     mixins.ListModelMixin
 ):
@@ -33,11 +43,3 @@ class FileOperationViewSet(
     serializer_class = FileOperationSerializer
     permission_classes = [permissions.IsAuthenticated]
     filterset_class = FileOperationFilter
-
-    def get_serializer_class(self):
-        match self.action:
-            case 'create':
-                return CreateFileOperationSerializer
-            case 'list' | 'retrieve':
-                return FileOperationSerializer
-        return super(FileOperationViewSet, self).get_serializer_class()
