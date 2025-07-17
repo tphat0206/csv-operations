@@ -47,7 +47,7 @@ services:
 
   celery_worker:
     build: .
-    command: celery -A root worker -l info
+    command: celery -A root worker -l info -E
     volumes:
       - .:/app
     depends_on:
