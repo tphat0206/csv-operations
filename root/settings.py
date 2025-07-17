@@ -91,7 +91,7 @@ SIMPLE_JWT = {
     "TOKEN_TYPE_CLAIM": "token_type",
     "JTI_CLAIM": "jti",
 
-    "SLIDING_TOKEN_LIFETIME": timedelta(minutes=5),
+    "SLIDING_TOKEN_LIFETIME": timedelta(hours=3),
     "SLIDING_TOKEN_REFRESH_LIFETIME": timedelta(days=1),
 }
 
@@ -160,7 +160,12 @@ LOGGING = {
             'level': 'INFO',
             'propagate': True,
         },
-        'file_service': {  # Logger for your specific app
+        'file_service': {
+            'handlers': ['console'],
+            'level': 'DEBUG',
+            'propagate': False,
+        },
+        'account': {
             'handlers': ['console'],
             'level': 'DEBUG',
             'propagate': False,

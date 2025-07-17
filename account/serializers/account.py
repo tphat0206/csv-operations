@@ -1,9 +1,12 @@
+import logging
+
 from django.db.models import Q
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
 from account.models import Account
 
+logger = logging.getLogger(__name__)
 
 class AccountSerializer(serializers.ModelSerializer):
     class Meta:
@@ -49,7 +52,6 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
 
     def validate(self, attrs):
         data = super().validate(attrs)
-        data['access'] = str(self.get_token(self.user))
         data['user_id'] = self.user.uuid
         data['message'] = 'Login successful!'  # Custom message
 
